@@ -1,0 +1,623 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "Direct Deposit Management API",
+    "description" : "Are you a Veteran or Veteran beneficiary? [Update your direct deposit information on VA.gov](https://www.va.gov/change-direct-deposit/).\n\n[https://blue.qa.lighthouse.va.gov/direct-deposit-management/v1/openapi.json](https://blue.qa.lighthouse.va.gov/direct-deposit-management/v1/openapi.json)\n\nInternal, front-end VA applications can use\nthis API to let eligible Veterans or their\nbeneficiaries manage direct deposit information\nfor VA disability and pension benefit payments.\n\nThis API offers functionality to:\n* Return, create, or update direct deposit\nbanking information for disability and pension compensation\n* Support payments to Veterans, spouses,\nand other beneficiaries\n* Determine eligibility for direct deposit\nmanagement including detection of payments\n* Validate routing information\n* Auto-populate payment info into the\nonline 526 claim process\n\nThis API does not perform some direct deposit tasks. Use VA.gov to:\n* [Set up direct deposit for VA travel pay reimbursement](https://www.va.gov/resources/how-to-set-up-direct-deposit-for-va-travel-pay-reimbursement/)\n* [Change direct deposit information for education benefits](https://www.va.gov/change-direct-deposit/)\n\nIf a Veteran needs to change the address returned with\ndirect deposit information, they should [update the address on VA Profile](https://www.va.gov/change-address/).\n\n## Technical overview\nThe Direct Deposit Management API receives an Integration\nControl Number (ICN) and determines whether the individual\nis eligible to receive payments via direct deposit.\nIf the individual is eligible and has been awarded\ndisability or pension payments from VA, the API returns,\nupdates, or adds direct deposit account information.\n\nFor fraud prevention purposes, the front-end consumer\nmust obtain successful 2FA authentication of the user\nbefore allowing direct deposit inquiry or maintenance\nthrough this API.\n\n### Errors\nFor some responses, more than one error may be applicable.\nFor this reason, the error payload returns as an array.\n\n### Authentication and Authorization\nThis API uses the client credentials grant (CCG) flow to\nprovide an access token to trusted systems.\nSee our [CCG Authorization Guide](https://developer.va.gov/explore/authorization/docs/client-credentials?api=claims) for more details.\n\n### Test data\nValidate your application’s integration with our API in\nthe sandbox environment using mock [test data](https://github.com/department-of-veterans-affairs/vets-api-clients/blob/master/test_accounts/letter_generator_test_accounts.md).\nSandbox test data contains no PII or PHI but mimics real\nVeteran or beneficiary demographics and benefits information.\n\n### Consumer onboarding\n\nGetting sandbox access\n* Get automatic sandbox access to this API by [requesting an API key](https://developer.va.gov/onboarding/request-sandbox-access).\n* Our rate limit is 60 requests per minute. If you exceed this quota,\nyour request will return a 429 status code.\n* You may petition for increased rate limits\nby [emailing us](mailto:API@va.gov).\nApproval will be decided on a case-by-case basis.\n\nGetting production access\n* When you’re ready, request production access. Getting production\naccess requires multiple steps and can take over a month.\n[Learn about requesting production access](https://developer.va.gov/onboarding).\n",
+    "contact" : {
+      "name" : "VA.gov"
+    },
+    "version" : "0.0.1"
+  },
+  "servers" : [ {
+    "url" : "https://sandbox-api.va.gov/services/direct-deposit-management/{version}",
+    "description" : "VA.gov API sandbox environment.",
+    "variables" : {
+      "version" : {
+        "default" : "v1"
+      }
+    }
+  }, {
+    "url" : "https://api.va.gov/services/direct-deposit-management/{version}",
+    "description" : "VA.gov API production environment.",
+    "variables" : {
+      "version" : {
+        "default" : "v1"
+      }
+    }
+  } ],
+  "paths" : {
+    "/direct-deposit" : {
+      "get" : {
+        "tags" : [ "DirectDeposit" ],
+        "summary" : "Get direct deposit account and eligibility and control information.",
+        "description" : "  Get direct deposit account and eligibility and control information.\n",
+        "operationId" : "get-direct-deposit",
+        "parameters" : [ {
+          "name" : "icn",
+          "in" : "query",
+          "description" : "The authenticated Veteran or beneficiary Master Patient Index (MPI) ICN",
+          "required" : true,
+          "schema" : {
+            "maxLength" : 17,
+            "minLength" : 17,
+            "pattern" : "^\\d{10}V\\d{6}$",
+            "type" : "string",
+            "example" : "1000000000V100000"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "A Response which indicates a successful Request.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DirectDepositResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BadRequest"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Not authorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "maxLength" : 8000,
+                  "minLength" : 1,
+                  "type" : "string",
+                  "example" : {
+                    "message" : "Invalid authentication credentials"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "maxLength" : 8000,
+                  "minLength" : 1,
+                  "type" : "string",
+                  "example" : {
+                    "message" : "You cannot consume this service"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserNotFound"
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "Too many requests",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "maxLength" : 8000,
+                  "minLength" : 1,
+                  "type" : "string",
+                  "example" : {
+                    "message" : "API rate limit exceeded"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal Server Error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "OAuth" : [ ]
+        } ]
+      },
+      "put" : {
+        "tags" : [ "DirectDeposit" ],
+        "summary" : "Create or update direct deposit account information.",
+        "description" : "  Create or update direct deposit account information.\n",
+        "operationId" : "update-direct-deposit",
+        "parameters" : [ {
+          "name" : "icn",
+          "in" : "query",
+          "description" : "The authenticated Veteran or beneficiary Master Patient Index (MPI) ICN",
+          "required" : true,
+          "schema" : {
+            "maxLength" : 17,
+            "minLength" : 17,
+            "pattern" : "^\\d{10}V\\d{6}$",
+            "type" : "string",
+            "example" : "1000000000V100000"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "The Update request",
+          "content" : {
+            "*/*" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "A Response which indicates a successful Request.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DirectDepositResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BadRequest"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Not authorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "maxLength" : 8000,
+                  "minLength" : 1,
+                  "type" : "string",
+                  "example" : {
+                    "message" : "Invalid authentication credentials"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "maxLength" : 8000,
+                  "minLength" : 1,
+                  "type" : "string",
+                  "example" : {
+                    "message" : "You cannot consume this service"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserNotFound"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Unprocessable Entity",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UnprocessableEntity"
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "Too many requests",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "maxLength" : 8000,
+                  "minLength" : 1,
+                  "type" : "string",
+                  "example" : {
+                    "message" : "API rate limit exceeded"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal Server Error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "OAuth" : [ ]
+        } ]
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "BadRequest" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A URI reference that identifies the problem type.",
+            "example" : "https://example.net/validation-error"
+          },
+          "title" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A short, human-readable summary of the problem type.",
+            "example" : "Invalid field value"
+          },
+          "status" : {
+            "type" : "integer",
+            "description" : "The HTTP status code generated by the origin server for this occurrence of the problem.",
+            "format" : "int32",
+            "example" : 400
+          },
+          "detail" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A human-readable explanation specific to this occurrence of the problem.",
+            "example" : "This error occurred because of..."
+          },
+          "instance" : {
+            "maxLength" : 36,
+            "minLength" : 36,
+            "type" : "string",
+            "description" : "A URI reference that identifies the specific occurrence of the problem.  It may or may not yield further information if dereferenced.",
+            "example" : "e6d1119e-dc91-4b4d-b583-0f309de0807b"
+          },
+          "errorCodes" : {
+            "maxItems" : 10,
+            "minItems" : 0,
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ErrorCode"
+            }
+          }
+        },
+        "example" : {
+          "type" : "https://api.va.gov/services/direct-deposit-management/errors/constraint-violation",
+          "title" : "Bad Request",
+          "status" : 400,
+          "detail" : "getDirectDeposit.icn must be between 17 and 17",
+          "instance" : "e48e3aeb-f312-11ec-88e8-f55e56a472a2",
+          "errorCodes" : [ ]
+        }
+      },
+      "ControlInformation" : {
+        "type" : "object",
+        "properties" : {
+          "canUpdateAddress" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "corpAvailIndicator" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "corpRecFoundIndicator" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "noBdnPaymentsIndicator" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "indentityIndicator" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "indexIndicator" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "competentIndicator" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "mailingAddressExistIndicator" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "noFiduciaryAssignedIndicator" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "notDeceasedIndicator" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "paymentAddressExistIndicator" : {
+            "type" : "boolean",
+            "example" : true
+          }
+        }
+      },
+      "DirectDepositResponse" : {
+        "required" : [ "controlInformation", "paymentAccount" ],
+        "type" : "object",
+        "properties" : {
+          "paymentAccount" : {
+            "$ref" : "#/components/schemas/EftInformation"
+          },
+          "controlInformation" : {
+            "$ref" : "#/components/schemas/ControlInformation"
+          }
+        }
+      },
+      "EftInformation" : {
+        "required" : [ "accountNumber", "accountType", "financialInstitutionRoutingNumber" ],
+        "type" : "object",
+        "properties" : {
+          "accountType" : {
+            "maxLength" : 8,
+            "minLength" : 7,
+            "type" : "string",
+            "example" : "Checking",
+            "enum" : [ "CHECKING", "SAVINGS" ]
+          },
+          "accountNumber" : {
+            "maxLength" : 17,
+            "minLength" : 1,
+            "pattern" : "^[a-zA-Z\\d]{1,17}$",
+            "type" : "string",
+            "example" : "1234567890"
+          },
+          "financialInstitutionRoutingNumber" : {
+            "maxLength" : 9,
+            "minLength" : 9,
+            "pattern" : "^\\d{9}$",
+            "type" : "string",
+            "example" : "123456789"
+          },
+          "financialInstitutionName" : {
+            "maxLength" : 64,
+            "minLength" : 0,
+            "pattern" : "^\\p{ASCII}+$",
+            "type" : "string",
+            "readOnly" : true,
+            "example" : "First National Bank USA"
+          }
+        }
+      },
+      "ErrorCode" : {
+        "type" : "object",
+        "properties" : {
+          "errorCode" : {
+            "maxLength" : 44,
+            "minLength" : 0,
+            "type" : "string",
+            "example" : "payment.restriction.indicators.present"
+          },
+          "detail" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string",
+            "example" : "noBdnPaymentsIndicator was false"
+          }
+        }
+      },
+      "InternalServerError" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A URI reference that identifies the problem type.",
+            "example" : "https://example.net/validation-error"
+          },
+          "title" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A short, human-readable summary of the problem type.",
+            "example" : "Invalid field value"
+          },
+          "status" : {
+            "type" : "integer",
+            "description" : "The HTTP status code generated by the origin server for this occurrence of the problem.",
+            "format" : "int32",
+            "example" : 400
+          },
+          "detail" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A human-readable explanation specific to this occurrence of the problem.",
+            "example" : "This error occurred because of..."
+          },
+          "instance" : {
+            "maxLength" : 36,
+            "minLength" : 36,
+            "type" : "string",
+            "description" : "A URI reference that identifies the specific occurrence of the problem.  It may or may not yield further information if dereferenced.",
+            "example" : "e6d1119e-dc91-4b4d-b583-0f309de0807b"
+          }
+        },
+        "example" : {
+          "type" : "https://api.va.gov/services/direct-deposit-management/errors/generic/internal-server-error",
+          "title" : "Internal Server Error",
+          "status" : 500,
+          "detail" : "Internal Server Error",
+          "instance" : "e6d1119e-dc91-4b4d-b583-0f309de0807b"
+        }
+      },
+      "UnprocessableEntity" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A URI reference that identifies the problem type.",
+            "example" : "https://example.net/validation-error"
+          },
+          "title" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A short, human-readable summary of the problem type.",
+            "example" : "Invalid field value"
+          },
+          "status" : {
+            "type" : "integer",
+            "description" : "The HTTP status code generated by the origin server for this occurrence of the problem.",
+            "format" : "int32",
+            "example" : 400
+          },
+          "detail" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A human-readable explanation specific to this occurrence of the problem.",
+            "example" : "This error occurred because of..."
+          },
+          "instance" : {
+            "maxLength" : 36,
+            "minLength" : 36,
+            "type" : "string",
+            "description" : "A URI reference that identifies the specific occurrence of the problem.  It may or may not yield further information if dereferenced.",
+            "example" : "e6d1119e-dc91-4b4d-b583-0f309de0807b"
+          },
+          "errorCodes" : {
+            "maxItems" : 10,
+            "minItems" : 0,
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ErrorCode"
+            }
+          },
+          "debuggingPayload" : {
+            "maxLength" : 8000,
+            "type" : "string",
+            "description" : "Encrypted message to assist with debugging that occur while managing direct deposit information.",
+            "example" : "VkEgUHJvZmlsZSBDb250YWN0IEluZm9ybWF0aW9uIF..."
+          }
+        },
+        "example" : {
+          "type" : "https://api.va.gov/services/direct-deposit-management/errors/unprocessable-entity",
+          "title" : "Unprocessable Entity",
+          "status" : 422,
+          "detail" : "Unable to update",
+          "instance" : "e48e3aeb-f312-11ec-88e8-f55e56a472a2",
+          "errorCodes" : [ {
+            "errorCode" : "cnp.payment.routing.number.fraud.message",
+            "detail" : "Update Failed: Routing number related to potential fraud."
+          } ],
+          "debuggingPayload" : "asdfghjklasdfghjkl="
+        }
+      },
+      "UpdateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "paymentAccount" : {
+            "$ref" : "#/components/schemas/EftInformation"
+          }
+        }
+      },
+      "UserNotFound" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A URI reference that identifies the problem type.",
+            "example" : "https://example.net/validation-error"
+          },
+          "title" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A short, human-readable summary of the problem type.",
+            "example" : "Invalid field value"
+          },
+          "status" : {
+            "type" : "integer",
+            "description" : "The HTTP status code generated by the origin server for this occurrence of the problem.",
+            "format" : "int32",
+            "example" : 400
+          },
+          "detail" : {
+            "maxLength" : 8000,
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "A human-readable explanation specific to this occurrence of the problem.",
+            "example" : "This error occurred because of..."
+          },
+          "instance" : {
+            "maxLength" : 36,
+            "minLength" : 36,
+            "type" : "string",
+            "description" : "A URI reference that identifies the specific o
+						ccurrence of the problem.  It may or may not yield further information if dereferenced.",
+            "example" : "e6d1119e-dc91-4b4d-b583-0f309de0807b"
+          }
+        },
+        "example" : {
+          "type" : "https://api.va.gov/services/direct-deposit-management/errors/generic/not-found",
+          "title" : "Person for ICN not found",
+          "status" : 404,
+          "detail" : "No data found for ICN",
+          "instance" : "e6d1119e-dc91-4b4d-b583-0f309de0807b"
+        }
+      }
+    },
+    "securitySchemes" : {
+      "OAuth" : {
+        "type" : "oauth2",
+        "flows" : {
+          "clientCredentials" : {
+            "tokenUrl" : "https://api.va.gov/oauth2/direct-deposit-management/system/v1/token",
+            "scopes" : {
+              "direct-deposit-management.read" : "The veteran's access to direct deposit management that provides viewing of current EFT settings.",
+              "direct-deposit-management.write" : "The veteran's access to direct deposit management that provides updating of current EFT settings."
+            }
+          }
+        }
+      }
+    }
+  }
+}
